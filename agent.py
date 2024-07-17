@@ -6,122 +6,161 @@ import torch
 
 from brain import DQN, BrainTrainer, device
 from game import Game, Point, BLOCK_SIZE, Direction
-
-MAX_MEMORY = 1000
-EPSILON_GAMES = 80
-STATE = 11
-HIDDEN_LAYER_NEURON = 200
-OUTPUT = 3
-LEARNING_RATE = 0.001
-BATCH_SIZE = 1024
+from real_time_plot import setup_plot
 
 class Agent:
-    def __init__(self):
-        self.no_games = 0
+    def __init__(self, settings):
+        self.num_games = 0
         self.epsilon = 0
-        self.gamma = 0.9
-        self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = DQN(STATE, HIDDEN_LAYER_NEURON, OUTPUT)
+        self.gamma = settings['gamma']
+        self.memory = deque(maxlen=settings['max_memory'])
+        self.model = DQN(settings['state_size'], settings['hidden_layer_size'], settings['action_size'])
         self.model.to(device=device)
-        self.trainer = BrainTrainer(self.model, learning_rate=LEARNING_RATE, gamma=self.gamma)
+        self.trainer = BrainTrainer(self.model, learning_rate=settings['learning_rate'], gamma=self.gamma)
+        self.epsilon_decay = settings['epsilon_decay']
+        self.batch_size = settings['batch_size']
+        self.position_history = deque(maxlen=100)  # Track the last 100 positions to detect spirals
 
     def get_state(self, game):
-        # current snake head position
         head = game.snake[0]
 
-        # future head position of snake
-        point_l = Point(head.x - BLOCK_SIZE, head.y)
-        point_r = Point(head.x + BLOCK_SIZE, head.y)
-        point_u = Point(head.x, head.y - BLOCK_SIZE)
-        point_d = Point(head.x, head.y + BLOCK_SIZE)
+        # Possible future positions
+        point_left = Point(head.x - BLOCK_SIZE, head.y)
+        point_right = Point(head.x + BLOCK_SIZE, head.y)
+        point_up = Point(head.x, head.y - BLOCK_SIZE)
+        point_down = Point(head.x, head.y + BLOCK_SIZE)
 
-        # direction is relative to the direction of the head of snake
-        dir_l = game.direction == Direction.LEFT
-        dir_r = game.direction == Direction.RIGHT
-        dir_u = game.direction == Direction.UP
-        dir_d = game.direction == Direction.DOWN
+        # Current direction
+        dir_left = game.direction == Direction.LEFT
+        dir_right = game.direction == Direction.RIGHT
+        dir_up = game.direction == Direction.UP
+        dir_down = game.direction == Direction.DOWN
 
         state = [
-            # is there a collision going Straight
-            (dir_r and game.collision(point_r)) or
-            (dir_l and game.collision(point_l)) or
-            (dir_u and game.collision(point_u)) or
-            (dir_d and game.collision(point_d)),
-            # is there a collision going Right
-            (dir_u and game.collision(point_r)) or
-            (dir_d and game.collision(point_l)) or
-            (dir_l and game.collision(point_u)) or
-            (dir_r and game.collision(point_d)),
-            # is there a collision going Left
-            (dir_d and game.collision(point_r)) or
-            (dir_u and game.collision(point_l)) or
-            (dir_r and game.collision(point_u)) or
-            (dir_l and game.collision(point_d)),
+            # Danger straight
+            (dir_right and game.is_collision(point_right)) or
+            (dir_left and game.is_collision(point_left)) or
+            (dir_up and game.is_collision(point_up)) or
+            (dir_down and game.is_collision(point_down)),
 
-            # possible move
-            dir_l,
-            dir_r,
-            dir_u,
-            dir_d,
+            # Danger right
+            (dir_up and game.is_collision(point_right)) or
+            (dir_down and game.is_collision(point_left)) or
+            (dir_left and game.is_collision(point_up)) or
+            (dir_right and game.is_collision(point_down)),
 
-            # Where is the food?
-            game.food.x < game.head.x,  # is it left?
-            game.food.x > game.head.x,  # is it right?
-            game.food.y < game.head.y,  # is it up?
-            game.food.y > game.head.y  # is it down?
+            # Danger left
+            (dir_down and game.is_collision(point_right)) or
+            (dir_up and game.is_collision(point_left)) or
+            (dir_right and game.is_collision(point_up)) or
+            (dir_left and game.is_collision(point_down)),
+
+            # Move direction
+            dir_left,
+            dir_right,
+            dir_up,
+            dir_down,
+
+            # Food location
+            game.food.x < game.head.x,  # Food left
+            game.food.x > game.head.x,  # Food right
+            game.food.y < game.head.y,  # Food up
+            game.food.y > game.head.y  # Food down
         ]
 
         return np.array(state)
 
-    def long_memory(self):
-        if len(self.memory) > BATCH_SIZE:
-            sample = random.sample(self.memory, BATCH_SIZE)
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    def train_long_memory(self):
+        if len(self.memory) > self.batch_size:
+            mini_batch = random.sample(self.memory, self.batch_size)
         else:
-            sample = self.memory
-        state, move, reward, new_state, done = zip(*sample)  # [[s,s,s,s,s], [m,m,m,m,m] ...]
-        self.trainer.train(state, move, reward, new_state, done)
+            mini_batch = self.memory
 
-    def short_memory(self, state, move, reward, new_state, done):
-        self.trainer.train(state, move, reward, new_state, done)
+        states, actions, rewards, next_states, dones = zip(*mini_batch)
+        self.trainer.train(states, actions, rewards, next_states, dones)
 
-    def remember(self, state, move, reward, new_state, done):
-        self.memory.append((state, move, reward, new_state, done))  # [[s,m,...], [s,m,...], [s,m,...], [s,m,...]]
+    def train_short_memory(self, state, action, reward, next_state, done):
+        self.trainer.train(state, action, reward, next_state, done)
 
-    # Choose next move using epsilon-greedy strategy
     def get_action(self, state):
-        self.epsilon = EPSILON_GAMES - self.no_games
-        move = [0, 0, 0]  # Straight, LEFT, RIGHT
+        self.epsilon = max(0, self.epsilon_decay - self.num_games)
+        action = [0, 0, 0]  # [straight, left, right]
         if random.randint(0, 200) < self.epsilon:
-            m = random.randint(0, 2)
-            move[m] = 1
+            move = random.randint(0, 2)
+            action[move] = 1
         else:
-            state_ = torch.tensor(state, dtype=torch.float, device=device)
-            pred = self.model(state_)
-            m = torch.argmax(pred).item()
-            move[m] = 1
-        return move
+            state_tensor = torch.tensor(state, dtype=torch.float, device=device)
+            prediction = self.model(state_tensor)
+            move = torch.argmax(prediction).item()
+            action[move] = 1
+        return action
 
+    def detect_spiral(self, position):
+        """Detect if the snake is in a spiral by checking if it revisits the same positions."""
+        if position in self.position_history:
+            return True
+        self.position_history.append(position)
+        return False
 
 def train():
-    agent = Agent()
+    # Agent settings
+    agent_settings = {
+        'state_size': 11,
+        'hidden_layer_size': 256,
+        'action_size': 3,
+        'max_memory': 100_000,
+        'epsilon_decay': 80,
+        'learning_rate': 0.001,
+        'batch_size': 1000,
+        'gamma': 0.9
+    }
+
+    agent = Agent(agent_settings)
     game = Game()
     high_score = 0
     total_score = 0
+    scores = []
+    average_rewards = []
+    losses = []
+    epsilons = []
+    episode_rewards = []
+
+    agent.model.load('model.pth')
+    ani = setup_plot(scores, average_rewards, losses, epsilons)
+
     while True:
         state = agent.get_state(game)
-        move = agent.get_action(state)
-        reward, done, score = game.play(move)
+        action = agent.get_action(state)
+        reward, done, score = game.play_step(action)
 
-        new_state = agent.get_state(game)
-        agent.short_memory(state, move, reward, new_state, done)
-        agent.remember(state, move, reward, new_state, done)
+        next_state = agent.get_state(game)
+
+        # Detect spiral and apply penalty
+        if agent.detect_spiral(game.snake[0]):
+            reward -= 5  # Apply a penalty for getting into a spiral
+
+        agent.train_short_memory(state, action, reward, next_state, done)
+        agent.remember(state, action, reward, next_state, done)
+
+        episode_rewards.append(reward)
 
         if done:
-            game.reset()
-            agent.no_games += 1
-            agent.long_memory()
+            game.reset_game()
+            agent.num_games += 1
+            agent.train_long_memory()
+
             if score > high_score:
                 high_score = score
+                agent.model.save('model.pth')
 
-            print('info', agent.no_games, score, )
-            total_score += score
+            avg_reward = np.mean(episode_rewards)
+            scores.append(score)
+            average_rewards.append(avg_reward)
+            epsilons.append(agent.epsilon)
+
+            episode_rewards = []  # Reset episode rewards
+
+            print(f'Game: {agent.num_games}, Score: {score}, High Score: {high_score}, Avg Reward: {avg_reward:.2f}, Epsilon: {agent.epsilon:.2f}')
