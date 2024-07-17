@@ -52,6 +52,7 @@ class Game:
         self.score = 0
         self.food = None
         self.set_food()
+        self.current_round = 0
 
     def set_food(self):
         x = random.randint(0, (self.w - BLOCK_SIZE ) // BLOCK_SIZE) * BLOCK_SIZE
@@ -62,6 +63,7 @@ class Game:
             self.set_food()
 
     def play(self, action):
+        self.current_round += 1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -72,7 +74,7 @@ class Game:
         reward = 0
         game_over = False
         # game over
-        if self.collision():
+        if self.collision() or self.current_round > 100*len(self.snake):
             game_over = True
             reward = -REWARD
             return reward, game_over, self.score

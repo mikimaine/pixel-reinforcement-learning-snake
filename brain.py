@@ -1,12 +1,15 @@
 import torch
-from torch import nn, optim
+import torch.nn as nn
+import torch.optim as optim
 import torch.nn.functional as F
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 class DQN(nn.Module):
 
     def __init__(self, input_size, hidden_layer_size, output_size):
-        super(DQN, self).__init__()
+        super().__init__()
         self.layer1 = nn.Linear(input_size, hidden_layer_size)
         self.layer2 = nn.Linear(hidden_layer_size, output_size)
 
@@ -14,18 +17,19 @@ class DQN(nn.Module):
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
         x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
+        x = self.layer2(x)
         return x
 
     def save(self, path):
         pass
 
+
 class BrainTrainer:
-    def __init__(self, model, learning_rate, gamma, epsilon_decay=0, epsilon_min=0 ):
+    def __init__(self, model, learning_rate, gamma, epsilon_decay=0, epsilon_min=0):
         self.lr = learning_rate
         self.gamma = gamma
         self.model = model
-        self.optimizer = optim.Adam(model.parameters(), lr=self.lr, amsgrad=True)
+        self.optimizer = optim.Adam(model.parameters(), lr=self.lr, )
         self.loss = nn.MSELoss()
 
     def train(self, state, action, reward, next_state, done):
@@ -38,7 +42,8 @@ class BrainTrainer:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = (done, )
+            action = torch.unsqueeze(action, 0)
+            done = (done,)
 
         prediction = self.model(state)
         copy = prediction.clone()
@@ -46,7 +51,7 @@ class BrainTrainer:
             QNew = reward[i]
             if not done[i]:
                 QNew = reward[i] + self.gamma * torch.max(self.model(next_state[i]))
-            copy[i][torch.argmax(action[i])] = QNew
+            copy[i][torch.argmax(action[i]).item()] = QNew
 
         self.optimizer.zero_grad()
         loss = self.loss(copy, prediction)

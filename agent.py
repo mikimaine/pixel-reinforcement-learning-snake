@@ -95,7 +95,7 @@ class Agent:
             m = random.randint(0, 2)
             move[m] = 1
         else:
-            state_ = torch.tensor(state, dtype=torch.float)
+            state_ = torch.tensor(state, dtype=torch.float, device=device)
             pred = self.model(state_)
             m = torch.argmax(pred).item()
             move[m] = 1
