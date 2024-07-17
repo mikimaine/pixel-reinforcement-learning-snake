@@ -4,10 +4,16 @@ from collections import deque
 import numpy as np
 import torch
 
+from brain import DQN, BrainTrainer, device
 from game import Game, Point, BLOCK_SIZE, Direction
 
 MAX_MEMORY = 1000
 EPSILON_GAMES = 80
+STATE = 11
+HIDDEN_LAYER_NEURON = 200
+OUTPUT = 3
+LEARNING_RATE = 0.001
+BATCH_SIZE = 1024
 
 class Agent:
     def __init__(self):
@@ -15,8 +21,9 @@ class Agent:
         self.epsilon = 0
         self.gamma = 0.9
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = None
-        self.trainer = None
+        self.model = DQN(STATE, HIDDEN_LAYER_NEURON, OUTPUT)
+        self.model.to(device=device)
+        self.trainer = BrainTrainer(self.model, learning_rate=LEARNING_RATE, gamma=self.gamma)
 
     def get_state(self, game):
         # current snake head position
@@ -58,38 +65,48 @@ class Agent:
             dir_d,
 
             # Where is the food?
-            game.food.x < game.head.x, # is it left?
-            game.food.x > game.head.x, # is it right?
-            game.food.y < game.head.y, # is it up?
+            game.food.x < game.head.x,  # is it left?
+            game.food.x > game.head.x,  # is it right?
+            game.food.y < game.head.y,  # is it up?
             game.food.y > game.head.y  # is it down?
         ]
 
         return np.array(state)
 
     def long_memory(self):
-        pass
+        if len(self.memory) > BATCH_SIZE:
+            sample = random.sample(self.memory, BATCH_SIZE)
+        else:
+            sample = self.memory
+        state, move, reward, new_state, done = zip(*sample)  # [[s,s,s,s,s], [m,m,m,m,m] ...]
+        self.trainer.train(state, move, reward, new_state, done)
+
     def short_memory(self, state, move, reward, new_state, done):
-        pass
+        self.trainer.train(state, move, reward, new_state, done)
 
     def remember(self, state, move, reward, new_state, done):
-        pass
+        self.memory.append((state, move, reward, new_state, done))  # [[s,m,...], [s,m,...], [s,m,...], [s,m,...]]
 
     # Choose next move using epsilon-greedy strategy
     def get_action(self, state):
         self.epsilon = EPSILON_GAMES - self.no_games
-        move = [0, 0, 0] # Straight, LEFT, RIGHT
+        move = [0, 0, 0]  # Straight, LEFT, RIGHT
         if random.randint(0, 200) < self.epsilon:
             m = random.randint(0, 2)
             move[m] = 1
         else:
             state_ = torch.tensor(state, dtype=torch.float)
-            # pred =
+            pred = self.model(state_)
+            m = torch.argmax(pred).item()
+            move[m] = 1
         return move
+
 
 def train():
     agent = Agent()
     game = Game()
-
+    high_score = 0
+    total_score = 0
     while True:
         state = agent.get_state(game)
         move = agent.get_action(state)
@@ -103,5 +120,8 @@ def train():
             game.reset()
             agent.no_games += 1
             agent.long_memory()
+            if score > high_score:
+                high_score = score
 
-
+            print('info', agent.no_games, score, )
+            total_score += score
