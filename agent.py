@@ -68,14 +68,17 @@ class Agent:
 
     def long_memory(self):
         pass
-    def short_memory(self):
+    def short_memory(self, state, move, reward, new_state, done):
+        pass
+
+    def remember(self, state, move, reward, new_state, done):
         pass
 
     # Choose next move using epsilon-greedy strategy
     def get_action(self, state):
         self.epsilon = EPSILON_GAMES - self.no_games
         move = [0, 0, 0] # Straight, LEFT, RIGHT
-        if random.random(0, 200) < self.epsilon:
+        if random.randint(0, 200) < self.epsilon:
             m = random.randint(0, 2)
             move[m] = 1
         else:
@@ -90,9 +93,15 @@ def train():
     while True:
         state = agent.get_state(game)
         move = agent.get_action(state)
-        reward, done, score = game.move(move)
+        reward, done, score = game.play(move)
 
         new_state = agent.get_state(game)
+        agent.short_memory(state, move, reward, new_state, done)
+        agent.remember(state, move, reward, new_state, done)
 
+        if done:
+            game.reset()
+            agent.no_games += 1
+            agent.long_memory()
 
 

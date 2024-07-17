@@ -1,6 +1,8 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QFormLayout, QPushButton, )
 
+from agent import train
+
 
 class GameSettings:
     def __init__(self, ):
@@ -38,6 +40,7 @@ class SettingScreen(QWidget):
 
 def start_game(game_settings):
     print(f'Game settings: {game_settings}')
+    train()
 
 
 if __name__ == '__main__':
