@@ -2,26 +2,16 @@ import pygame
 import random
 import sys
 import numpy as np
-from collections import namedtuple
 
-from util import Direction, load_assets, get_direction, BLOCK_SIZE
+from util import Direction, load_assets, get_direction, BLOCK_SIZE, BACKGROUND_COLOR_TOP, BACKGROUND_COLOR_BOTTOM, \
+    WHITE, Coordinate
 
 pygame.init()
 
-font = pygame.font.SysFont('arial', 25)
 font_small = pygame.font.SysFont('Arial', 14, bold=False)
 
-# Define a point structure for positions
-Point = namedtuple('Point', 'x, y')
-
-# Define colors
-WHITE = (255, 255, 255)
-BACKGROUND_COLOR_TOP = (30, 30, 30)  # Dark grey
-BACKGROUND_COLOR_BOTTOM = (50, 50, 50)  # Slightly lighter grey
-INFO_BOX_COLOR = (50, 50, 50, 180)  # Semi-transparent dark grey
-
 # Game settings
-GAME_SPEED = 50
+FRAME_SPEED = 100
 REWARD = 10
 
 
@@ -40,25 +30,11 @@ class Game:
         # Load assets
         self.assets = load_assets()
 
-    def reset_game(self):
-        """Reset the game state."""
-        self.direction = Direction.RIGHT
-        self.head = Point(self.width / 2, self.height / 2)
-        self.snake = [
-            self.head,
-            Point(self.head.x - BLOCK_SIZE, self.head.y),
-            Point(self.head.x - (2 * BLOCK_SIZE), self.head.y),
-        ]
-        self.score = 0
-        self.food = None
-        self.place_food()
-        self.frame_iteration = 0
-
     def place_food(self):
         """Place food randomly on the game board."""
         x = random.randint(0, (self.width - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
         y = random.randint(0, (self.height - BLOCK_SIZE) // BLOCK_SIZE) * BLOCK_SIZE
-        self.food = Point(x, y)
+        self.food = Coordinate(x, y)
         if self.food in self.snake:
             self.place_food()
 
@@ -95,8 +71,8 @@ class Game:
         else:
             self.snake.pop()
 
-        self.update_ui()
-        self.clock.tick(GAME_SPEED)
+        self.render()
+        self.clock.tick(FRAME_SPEED)
         return reward, game_over, self.score
 
     def move_snake(self, action):
@@ -124,7 +100,7 @@ class Game:
         elif self.direction == Direction.DOWN:
             y += BLOCK_SIZE
 
-        self.head = Point(int(x), int(y))
+        self.head = Coordinate(int(x), int(y))
 
     def is_collision(self, point=None):
         """Check for collisions with walls or itself."""
@@ -141,7 +117,7 @@ class Game:
 
         return False
 
-    def update_ui(self):
+    def render(self):
         """Update the game's user interface."""
         self.display_checkerboard_background()
 
@@ -262,3 +238,18 @@ class Game:
             for x in range(0, self.width, square_size):
                 color = light_green if (x // square_size) % 2 == (y // square_size) % 2 else dark_green
                 pygame.draw.rect(self.display, color, (x, y, square_size, square_size))
+
+    def reset_game(self):
+        """Reset the game state."""
+
+        self.direction = Direction.RIGHT
+        self.head = Coordinate(self.width / 2, self.height / 2)
+        self.snake = [
+            self.head,
+            Coordinate(self.head.x - BLOCK_SIZE, self.head.y),
+            Coordinate(self.head.x - (2 * BLOCK_SIZE), self.head.y),
+        ]
+        self.score = 0
+        self.food = None
+        self.place_food()
+        self.frame_iteration = 0

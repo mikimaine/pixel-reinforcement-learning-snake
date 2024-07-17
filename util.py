@@ -1,6 +1,15 @@
+from collections import namedtuple
 from enum import Enum
 
 import pygame
+
+# Define a point structure for positions
+Coordinate = namedtuple('Coordinate', 'x, y')
+# Define colors
+WHITE = (255, 255, 255)
+BACKGROUND_COLOR_TOP = (30, 30, 30)  # Dark grey
+BACKGROUND_COLOR_BOTTOM = (50, 50, 50)  # Slightly lighter grey
+INFO_BOX_COLOR = (50, 50, 50, 180)  # Semi-transparent dark grey
 
 BLOCK_SIZE = 20
 

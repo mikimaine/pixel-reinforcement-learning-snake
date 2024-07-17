@@ -5,8 +5,9 @@ import numpy as np
 import torch
 
 from brain import DQN, BrainTrainer, device
-from game import Game, Point, BLOCK_SIZE, Direction
+from game import Game, Coordinate, BLOCK_SIZE, Direction
 from real_time_plot import setup_plot
+
 
 class Agent:
     def __init__(self, settings):
@@ -20,15 +21,16 @@ class Agent:
         self.epsilon_decay = settings['epsilon_decay']
         self.batch_size = settings['batch_size']
         self.position_history = deque(maxlen=100)  # Track the last 100 positions to detect spirals
+        self.losses = []
 
     def get_state(self, game):
         head = game.snake[0]
 
         # Possible future positions
-        point_left = Point(head.x - BLOCK_SIZE, head.y)
-        point_right = Point(head.x + BLOCK_SIZE, head.y)
-        point_up = Point(head.x, head.y - BLOCK_SIZE)
-        point_down = Point(head.x, head.y + BLOCK_SIZE)
+        point_left = Coordinate(head.x - BLOCK_SIZE, head.y)
+        point_right = Coordinate(head.x + BLOCK_SIZE, head.y)
+        point_up = Coordinate(head.x, head.y - BLOCK_SIZE)
+        point_down = Coordinate(head.x, head.y + BLOCK_SIZE)
 
         # Current direction
         dir_left = game.direction == Direction.LEFT
@@ -80,13 +82,16 @@ class Agent:
             mini_batch = self.memory
 
         states, actions, rewards, next_states, dones = zip(*mini_batch)
-        self.trainer.train(states, actions, rewards, next_states, dones)
+        loss = self.trainer.train(states, actions, rewards, next_states, dones)
+        self.losses.append(loss)
 
     def train_short_memory(self, state, action, reward, next_state, done):
-        self.trainer.train(state, action, reward, next_state, done)
+        loss = self.trainer.train(state, action, reward, next_state, done)
+        self.losses.append(loss)
 
     def get_action(self, state):
-        self.epsilon = max(0, self.epsilon_decay - self.num_games)
+        # self.epsilon = max(0, self.epsilon_decay - self.num_games)
+        self.epsilon = 80 - self.num_games
         action = [0, 0, 0]  # [straight, left, right]
         if random.randint(0, 200) < self.epsilon:
             move = random.randint(0, 2)
@@ -104,6 +109,7 @@ class Agent:
             return True
         self.position_history.append(position)
         return False
+
 
 def train():
     # Agent settings
@@ -124,12 +130,11 @@ def train():
     total_score = 0
     scores = []
     average_rewards = []
-    losses = []
     epsilons = []
     episode_rewards = []
 
-    agent.model.load('model.pth')
-    ani = setup_plot(scores, average_rewards, losses, epsilons)
+    # agent.model.load('model.pth')
+    ani = setup_plot(scores, average_rewards, agent.losses, epsilons)
 
     while True:
         state = agent.get_state(game)
@@ -163,4 +168,5 @@ def train():
 
             episode_rewards = []  # Reset episode rewards
 
-            print(f'Game: {agent.num_games}, Score: {score}, High Score: {high_score}, Avg Reward: {avg_reward:.2f}, Epsilon: {agent.epsilon:.2f}')
+            print(
+                f'Game: {agent.num_games}, Score: {score}, High Score: {high_score}, Avg Reward: {avg_reward:.2f}, Epsilon: {agent.epsilon:.2f}')

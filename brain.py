@@ -11,10 +11,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class DQN(nn.Module):
     """Deep Q-Network model"""
 
-    def __init__(self, input_size, hidden_layer_size, output_size):
+    def __init__(self, input_state_size, hidden_feature_state_size, output_action_size):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(input_size, hidden_layer_size)
-        self.layer2 = nn.Linear(hidden_layer_size, output_size)
+        self.layer1 = nn.Linear(input_state_size, hidden_feature_state_size)
+        self.layer2 = nn.Linear(hidden_feature_state_size, output_action_size)
 
     def forward(self, x):
         """Forward pass through the network"""
@@ -86,3 +86,5 @@ class BrainTrainer:
 
         # Update model parameters
         self.optimizer.step()
+
+        return loss.item()
