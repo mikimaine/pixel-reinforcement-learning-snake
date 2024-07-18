@@ -36,9 +36,26 @@ If using `venv`, run the following commands to set up the environment:
 ```bash
 create venv
 run source venv/bin/activate
+```
+
+### Python packages installation
+
+To install the python packages used:
+```bash
 pip install -r requirements.txt
 ```
 
+## Running the project
+
+To run the project, execute:
+
+```bash
+python training_setting.py
+```
+
+A window with start up settings will be presented. To run the game driven by the agent, click `Start`.
+
+![Settings Window](settings.png)
 
 ## Main Assets
     - Enviroment
