@@ -13,14 +13,15 @@ class DQN(nn.Module):
 
     def __init__(self, input_state_size, hidden_feature_state_size, output_action_size):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(input_state_size, hidden_feature_state_size)
-        self.layer2 = nn.Linear(hidden_feature_state_size, output_action_size)
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(input_state_size, hidden_feature_state_size),
+            nn.ReLU(),
+            nn.Linear(hidden_feature_state_size, output_action_size)
+        )
 
     def forward(self, x):
         """Forward pass through the network"""
-        x = F.relu(self.layer1(x))
-        x = self.layer2(x)
-        return x
+        return self.linear_relu_stack(x)
 
     def save(self, path):
         """Save the model to a file"""
