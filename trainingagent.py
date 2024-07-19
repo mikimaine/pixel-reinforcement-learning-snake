@@ -8,8 +8,69 @@ from brain import DQN, BrainTrainer, device
 from game import Game, Coordinate, BLOCK_SIZE, Direction
 from real_time_plot import setup_plot
 
+agent_settings = {
+    'state_size': 11,
+    'hidden_layer_size': 256,
+    'action_size': 3,
+    'max_memory': 100_000,
+    'epsilon_decay': 80,
+    'learning_rate': 0.001,
+    'batch_size': 1000,
+    'gamma': 0.9
+}
 
-class Agent:
+
+def get_state(game):
+    head = game.snake[0]
+
+    # Possible future positions
+    point_left = Coordinate(head.x - BLOCK_SIZE, head.y)
+    point_right = Coordinate(head.x + BLOCK_SIZE, head.y)
+    point_up = Coordinate(head.x, head.y - BLOCK_SIZE)
+    point_down = Coordinate(head.x, head.y + BLOCK_SIZE)
+
+    # Current direction
+    dir_left = game.direction == Direction.LEFT
+    dir_right = game.direction == Direction.RIGHT
+    dir_up = game.direction == Direction.UP
+    dir_down = game.direction == Direction.DOWN
+
+    state = [
+        # Danger straight
+        (dir_right and game.is_collision(point_right)) or
+        (dir_left and game.is_collision(point_left)) or
+        (dir_up and game.is_collision(point_up)) or
+        (dir_down and game.is_collision(point_down)),
+
+        # Danger right
+        (dir_up and game.is_collision(point_right)) or
+        (dir_down and game.is_collision(point_left)) or
+        (dir_left and game.is_collision(point_up)) or
+        (dir_right and game.is_collision(point_down)),
+
+        # Danger left
+        (dir_down and game.is_collision(point_right)) or
+        (dir_up and game.is_collision(point_left)) or
+        (dir_right and game.is_collision(point_up)) or
+        (dir_left and game.is_collision(point_down)),
+
+        # Move direction
+        dir_left,
+        dir_right,
+        dir_up,
+        dir_down,
+
+        # Food location
+        game.food.x < game.head.x,  # Food left
+        game.food.x > game.head.x,  # Food right
+        game.food.y < game.head.y,  # Food up
+        game.food.y > game.head.y  # Food down
+    ]
+
+    return np.array(state)
+
+
+class TrainingAgent:
     def __init__(self, settings):
         self.num_games = 0
         self.epsilon = 0
@@ -22,55 +83,6 @@ class Agent:
         self.batch_size = settings['batch_size']
         self.position_history = deque(maxlen=100)  # Track the last 100 positions to detect spirals
         self.losses = []
-
-    def get_state(self, game):
-        head = game.snake[0]
-
-        # Possible future positions
-        point_left = Coordinate(head.x - BLOCK_SIZE, head.y)
-        point_right = Coordinate(head.x + BLOCK_SIZE, head.y)
-        point_up = Coordinate(head.x, head.y - BLOCK_SIZE)
-        point_down = Coordinate(head.x, head.y + BLOCK_SIZE)
-
-        # Current direction
-        dir_left = game.direction == Direction.LEFT
-        dir_right = game.direction == Direction.RIGHT
-        dir_up = game.direction == Direction.UP
-        dir_down = game.direction == Direction.DOWN
-
-        state = [
-            # Danger straight
-            (dir_right and game.is_collision(point_right)) or
-            (dir_left and game.is_collision(point_left)) or
-            (dir_up and game.is_collision(point_up)) or
-            (dir_down and game.is_collision(point_down)),
-
-            # Danger right
-            (dir_up and game.is_collision(point_right)) or
-            (dir_down and game.is_collision(point_left)) or
-            (dir_left and game.is_collision(point_up)) or
-            (dir_right and game.is_collision(point_down)),
-
-            # Danger left
-            (dir_down and game.is_collision(point_right)) or
-            (dir_up and game.is_collision(point_left)) or
-            (dir_right and game.is_collision(point_up)) or
-            (dir_left and game.is_collision(point_down)),
-
-            # Move direction
-            dir_left,
-            dir_right,
-            dir_up,
-            dir_down,
-
-            # Food location
-            game.food.x < game.head.x,  # Food left
-            game.food.x > game.head.x,  # Food right
-            game.food.y < game.head.y,  # Food up
-            game.food.y > game.head.y  # Food down
-        ]
-
-        return np.array(state)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -113,18 +125,8 @@ class Agent:
 
 def train():
     # Agent settings
-    agent_settings = {
-        'state_size': 11,
-        'hidden_layer_size': 256,
-        'action_size': 3,
-        'max_memory': 100_000,
-        'epsilon_decay': 80,
-        'learning_rate': 0.001,
-        'batch_size': 1000,
-        'gamma': 0.9
-    }
 
-    agent = Agent(agent_settings)
+    agent = TrainingAgent(agent_settings)
     game = Game()
     high_score = 0
     total_score = 0
@@ -132,16 +134,14 @@ def train():
     average_rewards = []
     epsilons = []
     episode_rewards = []
-
-    # agent.model.load('model.pth')
     ani = setup_plot(scores, average_rewards, agent.losses, epsilons)
 
     while True:
-        state = agent.get_state(game)
+        state = get_state(game)
         action = agent.get_action(state)
         reward, done, score = game.play_step(action)
 
-        next_state = agent.get_state(game)
+        next_state = get_state(game)
 
         # Detect spiral and apply penalty
         if agent.detect_spiral(game.snake[0]):

@@ -4,14 +4,14 @@ import sys
 import numpy as np
 
 from util import Direction, load_assets, get_direction, BLOCK_SIZE, BACKGROUND_COLOR_TOP, BACKGROUND_COLOR_BOTTOM, \
-    WHITE, Coordinate
+    WHITE, Coordinate, GameMode
 
 pygame.init()
 
 font_small = pygame.font.SysFont('Arial', 14, bold=False)
 
 # Game settings
-FRAME_SPEED = 100
+FRAME_SPEED = 20
 REWARD = 10
 
 
@@ -55,7 +55,7 @@ class Game:
         game_over = False
 
         # Check for collisions
-        if self.is_collision() or self.frame_iteration > 100 * len(self.snake):
+        if self.is_collision() or (self.game_mode == GameMode.TRAINING and self.frame_iteration > 100 * len(self.snake)):
             game_over = True
             reward = -REWARD
             if self.score > self.high_score:
@@ -207,24 +207,22 @@ class Game:
                 return self.assets['body_horizontal']  # Default to horizontal
             prev_direction = get_direction(previous, current)
             next_direction = get_direction(current, next)
-            if prev_direction == Direction.UP and next_direction == Direction.UP:
+            if prev_direction == Direction.UP and next_direction == Direction.UP or \
+                    prev_direction == Direction.DOWN and next_direction == Direction.DOWN:
                 return self.assets['body_vertical']
-            elif prev_direction == Direction.DOWN and next_direction == Direction.DOWN:
-                return self.assets['body_vertical']
-            elif prev_direction == Direction.LEFT and next_direction == Direction.LEFT:
+            elif prev_direction == Direction.LEFT and next_direction == Direction.LEFT or \
+                    prev_direction == Direction.RIGHT and next_direction == Direction.RIGHT:
                 return self.assets['body_horizontal']
-            elif prev_direction == Direction.RIGHT and next_direction == Direction.RIGHT:
-                return self.assets['body_horizontal']
-            elif (prev_direction == Direction.UP and next_direction == Direction.RIGHT) or \
+            elif (prev_direction == Direction.DOWN and next_direction == Direction.LEFT) or \
                     (prev_direction == Direction.RIGHT and next_direction == Direction.UP):
                 return self.assets['body_topleft']
-            elif (prev_direction == Direction.UP and next_direction == Direction.LEFT) or \
+            elif (prev_direction == Direction.DOWN and next_direction == Direction.RIGHT) or \
                     (prev_direction == Direction.LEFT and next_direction == Direction.UP):
                 return self.assets['body_topright']
-            elif (prev_direction == Direction.DOWN and next_direction == Direction.RIGHT) or \
+            elif (prev_direction == Direction.UP and next_direction == Direction.LEFT) or \
                     (prev_direction == Direction.RIGHT and next_direction == Direction.DOWN):
                 return self.assets['body_bottomleft']
-            elif (prev_direction == Direction.DOWN and next_direction == Direction.LEFT) or \
+            elif (prev_direction == Direction.UP and next_direction == Direction.RIGHT) or \
                     (prev_direction == Direction.LEFT and next_direction == Direction.DOWN):
                 return self.assets['body_bottomright']
 
@@ -253,3 +251,4 @@ class Game:
         self.food = None
         self.place_food()
         self.frame_iteration = 0
+        self.game_mode = GameMode.TRAINING

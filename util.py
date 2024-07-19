@@ -13,11 +13,17 @@ INFO_BOX_COLOR = (50, 50, 50, 180)  # Semi-transparent dark grey
 
 BLOCK_SIZE = 20
 
+
 class Direction(Enum):
     RIGHT = 1
     LEFT = 2
     UP = 3
     DOWN = 4
+
+
+class GameMode(Enum):
+    TRAINING = 1
+    TEST = 2
 
 
 def get_direction(start, end):

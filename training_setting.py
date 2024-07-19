@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QFormLayout, QPushButton, )
 
-from agent import train
+from trainingagent import train
 
 
 class GameSettings:
