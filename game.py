@@ -252,9 +252,15 @@ class Game:
 
     def reset_game(self):
         """Reset the game state."""
+        mid_x = self.width // 2
+        mid_y = self.height // 2
+
+        # Align the midpoint to the nearest BLOCK_SIZE multiple
+        aligned_mid_x = (mid_x // BLOCK_SIZE) * BLOCK_SIZE
+        aligned_mid_y = (mid_y // BLOCK_SIZE) * BLOCK_SIZE
 
         self.direction = Direction.RIGHT
-        self.head = Coordinate(self.width / 2, self.height / 2)
+        self.head = Coordinate(aligned_mid_x, aligned_mid_y)
         self.snake = [
             self.head,
             Coordinate(self.head.x - BLOCK_SIZE, self.head.y),
