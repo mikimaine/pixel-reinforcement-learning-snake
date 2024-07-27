@@ -50,7 +50,7 @@ pip install -r requirements.txt
 To run the project, execute:
 
 ```bash
-python training_setting.py
+python main.py
 ```
 
 A window with start up settings will be presented. To run the game driven by the agent, click `Start`.
