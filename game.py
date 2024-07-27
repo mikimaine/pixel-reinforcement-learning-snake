@@ -18,8 +18,8 @@ REWARD = 10
 class Game:
     def __init__(self, settings: GameSettings):
         self.speed = settings.speed
-        self.width = settings.width
-        self.height = settings.height
+        self.width = (settings.width // BLOCK_SIZE) * BLOCK_SIZE
+        self.height = (settings.height // BLOCK_SIZE) * BLOCK_SIZE
         self.grass_background = None
 
         # Set up display 
