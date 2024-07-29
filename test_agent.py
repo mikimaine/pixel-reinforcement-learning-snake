@@ -31,8 +31,11 @@ class TestAgent:
 
 
 def test(agent_settings):
+
+    print(agent_settings)
+
     agent = TestAgent(agent_settings)
-    game = Game()
+    game = Game(agent_settings)
     game.game_mode = GameMode.TEST
 
     # load the saved model

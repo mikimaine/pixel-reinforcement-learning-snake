@@ -10,6 +10,7 @@ from dataclasses import asdict
 class SettingScreen(QWidget):
     def __init__(self, settings, start_game_callback, test_game_callback):
         super().__init__()
+        self.default_values = asdict(settings)
         self.game_settings = settings
         self.start_game_callback = start_game_callback
         self.test_game_callback = test_game_callback
@@ -21,10 +22,13 @@ class SettingScreen(QWidget):
         self.setMinimumSize(400, 300)
 
         # Automatically creating fields based on game_settings attributes
-        for setting in asdict(self.game_settings):
+        for setting in self.default_values:
             input_field = QLineEdit(str(getattr(self.game_settings, setting)))
             self.input_fields[setting] = input_field
-            layout.addRow(f'{setting.replace("_", " ").title()}', input_field)
+            default_value = self.default_values[setting]
+            # Adding label with default value shown
+            label_text = f'{setting.replace("_", " ").title()} (default: {default_value})'
+            layout.addRow(label_text, input_field)
 
         train_button = QPushButton('Train Agent', self)
         train_button.clicked.connect(self.train_agent)

@@ -115,8 +115,10 @@ class TrainingAgent:
 def train(agent_settings):
     # Agent settings
 
+    print(agent_settings)
+
     agent = TrainingAgent(agent_settings)
-    game = Game()
+    game = Game(agent_settings)
     high_score = 0
     total_score = 0
     scores = []
