@@ -19,8 +19,9 @@ class Game:
     def __init__(self, width=640, height=480):
         self.width = width
         self.height = height
+        self.grass_background = None
 
-        # Set up display
+        # Set up display 
         self.display = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption('Snake Game')
         self.clock = pygame.time.Clock()
@@ -119,7 +120,7 @@ class Game:
 
     def render(self):
         """Update the game's user interface."""
-        self.display_checkerboard_background()
+        self.display.blit(self.grass_background, (0, 0))  # Blit the persistent grass background
 
         for i, point in enumerate(self.snake):
             if i == 0:
@@ -226,16 +227,27 @@ class Game:
                     (prev_direction == Direction.LEFT and next_direction == Direction.DOWN):
                 return self.assets['body_bottomright']
 
-    def display_checkerboard_background(self):
-        """Create a checkerboard background effect."""
-        square_size = BLOCK_SIZE + 10  # BLOCK_SIZE for the checkerboard squares
+    def create_grass_background(self):
+        """Create a persistent grass-like background with random dark dots of varying sizes."""
+        self.grass_background = pygame.Surface((self.width, self.height))
+        # Background settings
         light_green = (170, 215, 81)  # light green
-        dark_green = (162, 209, 73)  # dark green
+        dark_green = (122, 169, 53)  # Darker green for dots
+        dot_density = 25 # lower numbers more dots
+        max_dot_size = 2
+        # Fill the background surface with light green
+        self.grass_background.fill(light_green)
 
-        for y in range(0, self.height, square_size):
-            for x in range(0, self.width, square_size):
-                color = light_green if (x // square_size) % 2 == (y // square_size) % 2 else dark_green
-                pygame.draw.rect(self.display, color, (x, y, square_size, square_size))
+
+        # Randomly place darker green dots of varying sizes
+        number_of_dots = (self.width * self.height) // dot_density
+
+
+        for _ in range(number_of_dots):
+            dot_size = random.randint(1, max_dot_size)
+            x = random.randint(0, self.width - dot_size)
+            y = random.randint(0, self.height - dot_size)
+            pygame.draw.ellipse(self.grass_background, dark_green, (x, y, dot_size, dot_size))
 
     def reset_game(self):
         """Reset the game state."""
@@ -252,3 +264,6 @@ class Game:
         self.place_food()
         self.frame_iteration = 0
         self.game_mode = GameMode.TRAINING
+
+        # Create a persistent grass background
+        self.create_grass_background()
