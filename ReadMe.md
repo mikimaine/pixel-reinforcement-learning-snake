@@ -34,8 +34,8 @@ conda activate pixel
 If using `venv`, run the following commands to set up the environment:
 
 ```bash
-create venv
-run source venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 ```
 
 ### Python packages installation
@@ -53,9 +53,9 @@ To run the project, execute:
 python main.py
 ```
 
-A window with start up settings will be presented. To run the game driven by the agent, click `Start`.
+A window with start up settings will be presented. To run the game driven by the agent, click `Train Agent`.
 
-![Settings Window](settings.png)
+![Settings Window](training.png)
 
 ## Main Assets
     - Enviroment
