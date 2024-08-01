@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class GameSettings:
-    speed: int = 20
+    speed: int = 100
     state_size: int = 11
     hidden_layer_size: int = 256
     action_size: int = 3
