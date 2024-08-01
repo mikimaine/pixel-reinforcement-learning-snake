@@ -13,7 +13,6 @@ INFO_BOX_COLOR = (50, 50, 50, 180)  # Semi-transparent dark grey
 
 BLOCK_SIZE = 20
 
-
 class Direction(Enum):
     RIGHT = 1
     LEFT = 2

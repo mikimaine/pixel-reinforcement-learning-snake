@@ -7,18 +7,7 @@ import torch
 from brain import DQN, BrainTrainer, device
 from game import Game, Coordinate, BLOCK_SIZE, Direction
 from real_time_plot import setup_plot
-
-agent_settings = {
-    'state_size': 11,
-    'hidden_layer_size': 256,
-    'action_size': 3,
-    'max_memory': 100_000,
-    'epsilon_decay': 80,
-    'learning_rate': 0.001,
-    'batch_size': 1000,
-    'gamma': 0.9
-}
-
+from settings import GameSettings
 
 def get_state(game):
     head = game.snake[0]
@@ -71,16 +60,16 @@ def get_state(game):
 
 
 class TrainingAgent:
-    def __init__(self, settings):
+    def __init__(self, settings: GameSettings):
         self.num_games = 0
         self.epsilon = 0
-        self.gamma = settings['gamma']
-        self.memory = deque(maxlen=settings['max_memory'])
-        self.model = DQN(settings['state_size'], settings['hidden_layer_size'], settings['action_size'])
+        self.gamma = settings.gamma
+        self.memory = deque(maxlen=settings.max_memory)
+        self.model = DQN(settings.state_size, settings.hidden_layer_size, settings.action_size)
         self.model.to(device=device)
-        self.trainer = BrainTrainer(self.model, learning_rate=settings['learning_rate'], gamma=self.gamma)
-        self.epsilon_decay = settings['epsilon_decay']
-        self.batch_size = settings['batch_size']
+        self.trainer = BrainTrainer(self.model, learning_rate=settings.learning_rate, gamma=self.gamma)
+        self.epsilon_decay = settings.epsilon_decay
+        self.batch_size = settings.batch_size
         self.position_history = deque(maxlen=100)  # Track the last 100 positions to detect spirals
         self.losses = []
 
@@ -123,11 +112,13 @@ class TrainingAgent:
         return False
 
 
-def train():
+def train(agent_settings):
     # Agent settings
 
+    print(agent_settings)
+
     agent = TrainingAgent(agent_settings)
-    game = Game()
+    game = Game(agent_settings)
     high_score = 0
     total_score = 0
     scores = []

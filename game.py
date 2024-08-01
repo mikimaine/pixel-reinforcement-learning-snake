@@ -2,6 +2,7 @@ import pygame
 import random
 import sys
 import numpy as np
+from settings import GameSettings
 
 from util import Direction, load_assets, get_direction, BLOCK_SIZE, BACKGROUND_COLOR_TOP, BACKGROUND_COLOR_BOTTOM, \
     WHITE, Coordinate, GameMode
@@ -11,14 +12,14 @@ pygame.init()
 font_small = pygame.font.SysFont('Arial', 14, bold=False)
 
 # Game settings
-FRAME_SPEED = 20
 REWARD = 10
 
 
 class Game:
-    def __init__(self, width=640, height=480):
-        self.width = width
-        self.height = height
+    def __init__(self, settings: GameSettings):
+        self.speed = settings.speed
+        self.width = settings.width
+        self.height = settings.height
         self.grass_background = None
 
         # Set up display 
@@ -73,7 +74,7 @@ class Game:
             self.snake.pop()
 
         self.render()
-        self.clock.tick(FRAME_SPEED)
+        self.clock.tick(self.speed)
         return reward, game_over, self.score
 
     def move_snake(self, action):
